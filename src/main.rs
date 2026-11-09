@@ -28,6 +28,20 @@ fn main() -> eframe::Result {
         return Ok(());
     }
 
+    if let Some(i) = args.iter().position(|a| a == "--write-msix-assets") {
+        let dir = std::path::PathBuf::from(args.get(i + 1).cloned().unwrap_or_else(|| "Assets".into()));
+        write_msix_assets(&dir);
+        return Ok(());
+    }
+
+    if let Some(i) = args.iter().position(|a| a == "--showcase") {
+        let out = args.get(i + 1).cloned().unwrap_or_else(|| "showcase.png".into());
+        let m = win::monitor_at_cursor();
+        let desk = app::demo_desktop(m.w.max(1366) as usize, m.h.max(768) as usize);
+        fx::render_showcase(std::path::Path::new(&out), &desk);
+        return Ok(());
+    }
+
     if let Some(i) = args.iter().position(|a| a == "--fx-sample") {
         let out = args.get(i + 1).cloned().unwrap_or_else(|| "fx-sample.png".into());
         fx::render_sample(std::path::Path::new(&out));
@@ -90,4 +104,34 @@ fn ico_file() -> Vec<u8> {
         out.extend_from_slice(png);
     }
     out
+}
+
+/// Tile and taskbar images for the MSIX package (MRT names: scale-* and targetsize-*).
+fn write_msix_assets(dir: &std::path::Path) {
+    let _ = std::fs::create_dir_all(dir);
+    let padded = |w: u32, h: u32, scale: f32| {
+        let s = ((w.min(h) as f32) * scale).round().max(1.0) as u32;
+        let mut canvas = image::RgbaImage::new(w, h);
+        if let Some(icon) = image::RgbaImage::from_raw(s, s, win::icon_rgba(s as usize)) {
+            image::imageops::overlay(&mut canvas, &icon, ((w - s) / 2) as i64, ((h - s) / 2) as i64);
+        }
+        canvas
+    };
+    let mut list: Vec<(String, u32, u32, f32)> = vec![
+        ("StoreLogo.scale-100.png".into(), 50, 50, 1.0),
+        ("StoreLogo.scale-200.png".into(), 100, 100, 1.0),
+        ("Square44x44Logo.scale-100.png".into(), 44, 44, 1.0),
+        ("Square44x44Logo.scale-200.png".into(), 88, 88, 1.0),
+        ("Square150x150Logo.scale-100.png".into(), 150, 150, 0.62),
+        ("Square150x150Logo.scale-200.png".into(), 300, 300, 0.62),
+        ("Wide310x150Logo.scale-100.png".into(), 310, 150, 0.62),
+        ("Wide310x150Logo.scale-200.png".into(), 620, 300, 0.62),
+    ];
+    for t in [16u32, 24, 32, 48, 256] {
+        list.push((format!("Square44x44Logo.targetsize-{t}.png"), t, t, 1.0));
+        list.push((format!("Square44x44Logo.targetsize-{t}_altform-unplated.png"), t, t, 1.0));
+    }
+    for (name, w, h, scale) in list {
+        let _ = padded(w, h, scale).save(dir.join(name));
+    }
 }

@@ -1701,7 +1701,7 @@ fn paint_annot(painter: &egui::Painter, a: &Annot, xf: &dyn Fn(Pos2) -> Pos2, sc
 }
 
 /// A made-up desktop: wallpaper gradient, a couple of windows and a taskbar.
-fn demo_desktop(w: usize, h: usize) -> ColorImage {
+pub fn demo_desktop(w: usize, h: usize) -> ColorImage {
     let mut px = vec![Color32::BLACK; w * h];
     for y in 0..h {
         for x in 0..w {

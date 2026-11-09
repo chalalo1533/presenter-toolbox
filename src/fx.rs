@@ -1114,6 +1114,72 @@ unsafe fn text_mask(text: &str, size: i32) -> (i32, i32, Vec<u8>) {
 // ---------------------------------------------------------------------------
 // Self-test: renders sample keycaps / ripples to a PNG without touching the desktop.
 
+/// Keycaps badge built outside the live effects thread (for sample images).
+fn sample_badge(parts: &[&str], count: u32) -> BadgeDraw {
+    let text = |s: &str, size: i32| {
+        let (w, h, px) = unsafe { text_mask(s, size) };
+        Rc::new(Mask { w, h, px })
+    };
+    let pad = 14.0;
+    let mut items = Vec::new();
+    let mut x = pad;
+    for (i, p) in parts.iter().enumerate() {
+        if i > 0 {
+            let m = text("+", 26);
+            items.push(Item::Plus { x: x + 8.0, m: m.clone() });
+            x += m.w as f32 + 16.0;
+        }
+        let m = text(p, 22);
+        let cw = (m.w as f32 + 30.0).max(CAP_H);
+        items.push(Item::Cap { x, w: cw, m });
+        x += cw;
+    }
+    if count > 1 {
+        let m = text(&format!("×{count}"), 20);
+        let cw = m.w as f32 + 20.0;
+        x += 12.0;
+        items.push(Item::Count { x, w: cw, m });
+        x += cw;
+    }
+    BadgeDraw { w: x + pad, h: CAP_H + 5.0 + pad * 2.0, items, alpha: 1.0, press: 0.0 }
+}
+
+/// Store screenshot: a made-up desktop with the spotlight, click ripples and keycaps on top.
+pub fn render_showcase(path: &std::path::Path, desk: &eframe::egui::ColorImage) -> bool {
+    let (w, h) = (desk.size[0] as i32, desk.size[1] as i32);
+    let (sx, sy, sr) = (w as f32 * 0.50, h as f32 * 0.49, h as f32 * 0.21);
+    let mut px = Vec::with_capacity((w * h * 4) as usize);
+    for (i, p) in desk.pixels.iter().enumerate() {
+        let x = (i as i32 % w) as f32 + 0.5;
+        let y = (i as i32 / w) as f32 + 0.5;
+        // spotlight: dim everything outside the circle (soft 1.5 px edge)
+        let d = (x - sx).hypot(y - sy);
+        let inside = (sr + 0.75 - d).clamp(0.0, 1.5) / 1.5;
+        let k = 0.38 + 0.62 * inside;
+        let [r, g, b, _] = p.to_array();
+        px.extend_from_slice(&[(b as f32 * k) as u8, (g as f32 * k) as u8, (r as f32 * k) as u8, 255]);
+    }
+    let mut cv = Canvas { w, h, px: &mut px };
+    cv.ring(sx, sy, sr, 2.0, [255, 255, 255], 0.55);
+    // a left click in progress and a right click fading out
+    let (cx, cy) = (sx + sr * 0.35, sy + sr * 0.15);
+    cv.disc(cx, cy, 6.0, [255, 196, 0], 0.55);
+    cv.ring(cx, cy, 30.0, 1.5, [0, 0, 0], 0.35);
+    cv.ring(cx, cy, 28.0, 3.5, [255, 196, 0], 1.0);
+    let (rx, ry) = (sx - sr * 0.45, sy - sr * 0.3);
+    cv.ring(rx, ry, 40.0, 1.5, [0, 0, 0], 0.2);
+    cv.ring(rx, ry, 38.0, 2.0, [255, 70, 60], 0.55);
+    let bd = sample_badge(&["Ctrl", "Mayús", "S"], 2);
+    let bx = (w as f32 - bd.w) / 2.0;
+    let by = h as f32 - bd.h - 90.0;
+    draw_badge(&mut cv, &bd, bx, by);
+    let mut rgba = Vec::with_capacity(px.len());
+    for p in px.chunks_exact(4) {
+        rgba.extend_from_slice(&[p[2], p[1], p[0], 255]);
+    }
+    image::save_buffer(path, &rgba, w as u32, h as u32, image::ExtendedColorType::Rgba8).is_ok()
+}
+
 pub fn render_sample(path: &std::path::Path) -> bool {
     let (w, h) = (900i32, 260i32);
     let mut px = vec![0u8; (w * h * 4) as usize];
