@@ -1,0 +1,29 @@
+PRESENTER TOOLBOX  ·  versión portable 0.1.0
+By @chalalo, basado en el trabajo del gran Mark Russinovich (ZoomIt, Sysinternals).
+
+Zoom, dibujo, foco, clics y teclas en pantalla, capturas y grabación GIF
+para clases y presentaciones. Windows 10/11 de 64 bits.
+
+CÓMO USARLO
+  1. Descomprime la carpeta donde quieras (escritorio, pendrive…).
+  2. Abre presenter_toolbox.exe. No necesita instalación.
+  3. Queda en la bandeja del sistema, junto al reloj: clic en el icono para el menú.
+
+  La primera vez, Windows puede mostrar "Windows protegió su PC" porque el
+  programa no está firmado: pulsa "Más información" → "Ejecutar de todas formas".
+
+ATAJOS (se pueden cambiar en Opciones)
+  Ctrl+1  Zoom                     Ctrl+6         Recorte al portapapeles
+  Ctrl+2  Dibujar                  Ctrl+Mayús+6   Recorte a archivo PNG
+  Ctrl+3  Temporizador descanso    Ctrl+7         Foco
+  Ctrl+4  Zoom en vivo             Ctrl+8         Clics y teclas en pantalla
+  Ctrl+5  Captura al portapapeles  Ctrl+9         Grabar GIF (otra vez: detener)
+                                   Ctrl+0         Encontrar el mouse
+
+PORTABLE
+  Mientras exista el archivo "portable.ini" junto al .exe, la configuración
+  se guarda en esta misma carpeta (settings.json). Si lo borras, se guarda
+  en %APPDATA%\ZoomItRs.
+
+DESINSTALAR
+  Cierra el programa (icono de la bandeja → Salir) y borra la carpeta.

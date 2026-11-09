@@ -1,0 +1,46 @@
+# Builds the portable .zip and publishes it as a GitHub Release whenever a tag like v0.2.0 is pushed.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build
+        run: cargo build --release --locked
+
+      - name: Package portable zip
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart("v")
+          $dir = "PresenterToolbox"
+          New-Item -ItemType Directory $dir | Out-Null
+          Copy-Item target\release\presenter_toolbox.exe $dir
+          Copy-Item packaging\LEEME.txt $dir
+          "Configuración portable: mientras este archivo exista, los ajustes se guardan en esta carpeta." | Set-Content "$dir\portable.ini"
+          $zip = "PresenterToolbox-$ver-portable-win64.zip"
+          Compress-Archive -Path $dir -DestinationPath $zip
+          (Get-FileHash $zip -Algorithm SHA256).Hash + "  " + $zip | Set-Content "$zip.sha256"
+          "ZIP=$zip" | Out-File -Append $env:GITHUB_ENV
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            ${{ env.ZIP }}
+            ${{ env.ZIP }}.sha256
+          generate_release_notes: true

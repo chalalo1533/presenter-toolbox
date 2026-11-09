@@ -1,0 +1,7 @@
+/target
+/shots
+/src_respaldo*
+/dist
+build_out.txt
+settings.json
+*.pdb
