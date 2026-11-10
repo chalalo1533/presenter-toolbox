@@ -30,6 +30,10 @@ fn main() -> eframe::Result {
     // Global shortcuts, screen capture and overlays need X11: when an X server is reachable
     // (also true inside a Wayland session, through XWayland) make the window toolkit use it.
     #[cfg(target_os = "linux")]
+    preload_bundled_libs();
+    #[cfg(target_os = "linux")]
+    win::detect_session();
+    #[cfg(target_os = "linux")]
     if std::env::var_os("DISPLAY").is_some() {
         // SAFETY: nothing else is running yet, so no other thread can be reading the environment.
         unsafe { std::env::remove_var("WAYLAND_DISPLAY") };
@@ -74,12 +78,20 @@ fn main() -> eframe::Result {
         return Ok(());
     }
 
+    // `--do zoom`: what a desktop shortcut runs (see linux_gnome.rs)
+    #[cfg(target_os = "linux")]
+    win::set_initial_action(
+        args.iter().position(|a| a == "--do").and_then(|i| args.get(i + 1)).and_then(|n| win::action_from_name(n)),
+    );
+
     if screenshot.is_none() && !win::single_instance() {
         return Ok(());
     }
 
     let settings = settings::Settings::load();
     let start_hidden = screenshot.is_none() && !settings.show_options_on_start;
+    #[cfg(target_os = "linux")]
+    let start_hidden = start_hidden || (screenshot.is_none() && win::initial_action().is_some_and(|a| a != win::Action::Options));
 
     let icon = egui::IconData { rgba: win::icon_rgba(64), width: 64, height: 64 };
     let viewport = egui::ViewportBuilder::default()
@@ -160,4 +172,33 @@ fn write_msix_assets(dir: &std::path::Path) {
     for (name, w, h, scale) in list {
         let _ = padded(w, h, scale).save(dir.join(name));
     }
+}
+
+/// A stock Ubuntu/Debian desktop (Wayland) no longer installs the small X11 keyboard
+/// library the window toolkit needs (libxkbcommon-x11). The download carries it in a `lib`
+/// folder next to the program, together with the exact libxkbcommon it was built against
+/// (the two must match). They are used only when the system does not have its own.
+#[cfg(target_os = "linux")]
+fn preload_bundled_libs() {
+    use std::ffi::CString;
+    let open = |name: &std::ffi::OsStr| -> bool {
+        // SAFETY: dlopen with a valid, NUL-terminated name; the handle is kept for the whole
+        // run on purpose, so later lookups by library name find this copy.
+        CString::new(name.as_encoded_bytes())
+            .is_ok_and(|n| unsafe { !libc::dlopen(n.as_ptr(), libc::RTLD_NOW | libc::RTLD_GLOBAL).is_null() })
+    };
+    if open("libxkbcommon-x11.so.0".as_ref()) {
+        return; // the system has it
+    }
+    let Some(dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.join("lib"))) else { return };
+    if !dir.join("libxkbcommon-x11.so.0").exists() {
+        eprintln!("Falta la biblioteca libxkbcommon-x11. Instálala con:  sudo apt install libxkbcommon-x11-0");
+        return;
+    }
+    // order matters: each one is found by the next when it looks for its dependencies
+    open(dir.join("libxkbcommon.so.0").as_os_str());
+    if !open("libxcb-xkb.so.1".as_ref()) {
+        open(dir.join("libxcb-xkb.so.1").as_os_str());
+    }
+    open(dir.join("libxkbcommon-x11.so.0").as_os_str());
 }

@@ -1,4 +1,4 @@
-﻿//! Everything that talks to Windows directly: global hotkeys, the tray icon,
+//! Everything that talks to Windows directly: global hotkeys, the tray icon,
 //! fast screen capture, window placement and the GPU (DWM) live zoom.
 
 use std::ffi::c_void;
@@ -106,6 +106,11 @@ pub struct Msg {
     pub action: Action,
     pub capture: Option<Capture>,
     pub file: Option<std::path::PathBuf>,
+}
+
+/// Why a feature cannot be used on this system (always available on Windows).
+pub fn unavailable(_a: Action) -> Option<&'static str> {
+    None
 }
 
 /// Called by the GIF recorder when the file is ready to be saved.

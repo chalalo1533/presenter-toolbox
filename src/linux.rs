@@ -23,6 +23,35 @@ use x11rb::wrapper::ConnectionExt as _;
 use crate::settings::{HOTKEY_SLOTS, Hotkey, Hotkeys};
 use crate::soft::{Canvas, text_mask};
 
+#[path = "linux_gnome.rs"]
+mod gnome;
+pub use gnome::{action_from_name, detect_session, wayland};
+
+static INITIAL_ACTION: Mutex<Option<Action>> = Mutex::new(None);
+
+/// `--do <action>` on the command line: what to do once running (or to pass on to the copy
+/// that already is).
+pub fn set_initial_action(a: Option<Action>) {
+    *INITIAL_ACTION.lock().unwrap() = a;
+}
+
+pub fn initial_action() -> Option<Action> {
+    *INITIAL_ACTION.lock().unwrap()
+}
+
+/// Why a feature cannot be used on this system, if that is the case.
+pub fn unavailable(a: Action) -> Option<&'static str> {
+    match a {
+        Action::LiveZoom | Action::LiveIn | Action::LiveOut => Some(
+            "El zoom en vivo todavía no está disponible en Linux. Usa el zoom normal o el zoom propio de tu escritorio.",
+        ),
+        Action::Spotlight | Action::Tutorial | Action::FindMouse | Action::Gif if wayland() => Some(
+            "No disponible en sesiones Wayland (el escritorio normal de Ubuntu, Debian o Fedora): ahí el sistema no deja que una aplicación vea el mouse y el teclado de las demás ni dibuje sobre ellas. Funciona en sesiones X11.",
+        ),
+        _ => None,
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Types shared with the UI (same shapes as on Windows)
 
@@ -493,6 +522,9 @@ pub fn monitor_at_cursor() -> ScreenRect {
 pub fn capture(rect: ScreenRect) -> Option<ColorImage> {
     let x = x()?;
     let (rw, rh) = x.root_size();
+    if wayland() {
+        return capture_wayland(rect, rw, rh);
+    }
     let x0 = rect.x.max(0);
     let y0 = rect.y.max(0);
     let x1 = (rect.x + rect.w).min(rw);
@@ -524,6 +556,28 @@ pub fn capture(rect: ScreenRect) -> Option<ColorImage> {
         }
     }
     Some(ColorImage::new([fw, fh], pixels))
+}
+
+/// Wayland: the portal hands over the whole desktop; cut out the rectangle we were asked for.
+/// With display scaling the picture is larger than the X11 coordinates we work in, so it is
+/// brought to the size the caller expects.
+fn capture_wayland(rect: ScreenRect, rw: i32, rh: i32) -> Option<ColorImage> {
+    if rect.w <= 0 || rect.h <= 0 {
+        return None;
+    }
+    let full = gnome::capture_desktop()?;
+    let (fw, fh) = (full.width() as f32, full.height() as f32);
+    let (sx, sy) = (fw / rw.max(1) as f32, fh / rh.max(1) as f32);
+    let cx = ((rect.x.max(0) as f32) * sx).round() as u32;
+    let cy = ((rect.y.max(0) as f32) * sy).round() as u32;
+    let cw = ((rect.w as f32 * sx).round() as u32).min(full.width().saturating_sub(cx)).max(1);
+    let ch = ((rect.h as f32 * sy).round() as u32).min(full.height().saturating_sub(cy)).max(1);
+    let mut part = image::imageops::crop_imm(&full, cx, cy, cw, ch).to_image();
+    if (cw, ch) != (rect.w as u32, rect.h as u32) {
+        part = image::imageops::resize(&part, rect.w as u32, rect.h as u32, image::imageops::FilterType::Triangle);
+    }
+    let pixels = part.pixels().map(|p| Color32::from_rgb(p[0], p[1], p[2])).collect();
+    Some(ColorImage::new([rect.w as usize, rect.h as usize], pixels))
 }
 
 // ---------------------------------------------------------------------------
@@ -625,13 +679,20 @@ pub fn post_action(a: Action) {
     }
 }
 
+fn post_action_now(a: Action) {
+    if let Some(x) = x() {
+        x.send_cmd(x.cmd_win, [CMD_ACTION, a as u32, 0, 0, 0]);
+    }
+}
+
 /// Returns false if another copy is already running (and tells it to show its options).
 pub fn single_instance() -> bool {
     let Some(x) = x() else { return true };
     let sel = x.atoms._PRESENTER_TOOLBOX_INSTANCE;
     let owner = x.conn.get_selection_owner(sel).ok().and_then(|c| c.reply().ok()).map(|r| r.owner).unwrap_or(0);
     if owner != 0 && owner != x.cmd_win {
-        x.send_cmd(owner, [CMD_ACTION, Action::Options as u32, 0, 0, 0]);
+        let action = initial_action().unwrap_or(Action::Options);
+        x.send_cmd(owner, [CMD_ACTION, action as u32, 0, 0, 0]);
         return false;
     }
     let _ = x.conn.set_selection_owner(x.cmd_win, sel, 0u32);
@@ -808,11 +869,9 @@ pub fn start(
     let _ = SHARED.set(sh);
     if x().is_some() {
         std::thread::spawn(move || event_thread(tray));
-        if tray && std::env::var("XDG_SESSION_TYPE").is_ok_and(|t| t == "wayland") {
-            notify(
-                "Sesión Wayland",
-                "Los atajos globales, la captura y los efectos necesitan una sesión X11. Elige «Xorg» o «X11» al iniciar sesión.",
-            );
+        // started by a shortcut (`--do zoom`): do it as soon as the event thread is up
+        if let Some(a) = initial_action().filter(|a| *a != Action::Options) {
+            post_action_now(a);
         }
     } else if let Some(sh) = SHARED.get() {
         let defs = sh.hotkey_defs.lock().unwrap().clone();
@@ -821,6 +880,9 @@ pub fn start(
 }
 
 pub fn remove_tray() {
+    if wayland() {
+        gnome::clear_shortcuts();
+    }
     if let Some(x) = x() {
         x.send_cmd(x.cmd_win, [CMD_QUIT_TRAY, 0, 0, 0, 0]);
         std::thread::sleep(Duration::from_millis(30));
@@ -971,6 +1033,12 @@ impl Events {
         let Some(sh) = SHARED.get() else { return };
         self.ungrab_all();
         let defs = sh.hotkey_defs.lock().unwrap().clone();
+        if wayland() {
+            // key grabs only reach X11 windows there; the desktop itself runs the shortcuts
+            *sh.hotkeys.lock().unwrap() = gnome::apply_shortcuts(&defs);
+            sh.ctx.request_repaint();
+            return;
+        }
         let mut status = Vec::new();
         for d in defs {
             if d.key.vk == 0 {
@@ -1155,6 +1223,9 @@ impl Events {
                         CMD_SUSPEND => {
                             if d[1] != 0 {
                                 self.ungrab_all();
+                                if wayland() {
+                                    gnome::clear_shortcuts();
+                                }
                             } else {
                                 self.register_all();
                             }
@@ -1457,11 +1528,15 @@ fn trigger(a: Action, delayed: bool) {
     match a {
         Action::Options | Action::Exit => send(a, None),
         Action::GifDone => {}
-        Action::LiveZoom | Action::LiveIn | Action::LiveOut => {
-            notify(
-                "Zoom en vivo",
-                "Todavía no está disponible en Linux. Usa el zoom normal o el zoom de tu escritorio (Alt + rueda del mouse en XFCE y Cinnamon).",
-            );
+        _ if unavailable(a).is_some() => {
+            let title = match a {
+                Action::Spotlight => "Foco",
+                Action::Tutorial => "Clics y teclas",
+                Action::FindMouse => "Encontrar el mouse",
+                Action::Gif => "Grabar GIF",
+                _ => "Zoom en vivo",
+            };
+            notify(title, unavailable(a).unwrap_or_default());
         }
         Action::Spotlight => crate::fx::post(crate::fx::Cmd::Spot),
         Action::Tutorial => crate::fx::post(crate::fx::Cmd::Tutorial),

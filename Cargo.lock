@@ -2575,12 +2575,14 @@ dependencies = [
  "eframe",
  "epaint_default_fonts",
  "image",
+ "libc",
  "raw-window-handle",
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
  "winresource",
  "x11rb",
+ "zbus",
 ]
 
 [[package]]

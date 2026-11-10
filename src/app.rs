@@ -1340,10 +1340,9 @@ impl ZoomApp {
                         .add(egui::Slider::new(&mut self.s.live_level, 1.25..=8.0).step_by(0.25).suffix("×"))
                         .changed();
                 });
-                if cfg!(windows) {
-                    perf_note(ui, "Rendimiento: el ampliado lo hace el compositor de Windows en la GPU, sincronizado con cada fotograma de la pantalla.");
-                } else {
-                    perf_note(ui, "Todavía no está disponible en Linux. Usa el zoom normal o el zoom propio de tu escritorio (Alt + rueda del mouse en XFCE y Cinnamon).");
+                match win::unavailable(Action::LiveZoom) {
+                    Some(why) => unavailable_note(ui, why),
+                    None => perf_note(ui, "Rendimiento: el ampliado lo hace el compositor de Windows en la GPU, sincronizado con cada fotograma de la pantalla."),
                 }
                 ui.label(egui::RichText::new("Funciona en la pantalla principal.").small().color(Color32::from_gray(90)));
             }
@@ -1441,6 +1440,9 @@ impl ZoomApp {
             }
             Tab::Spot => {
                 self.heading(ui, "Foco", Some(7), "", accent);
+                if let Some(why) = win::unavailable(Action::Spotlight) {
+                    unavailable_note(ui, why);
+                }
                 ui.label("Oscurece toda la pantalla menos un círculo alrededor del mouse, para que todos miren donde tú quieres. Puedes seguir haciendo clic y trabajando normalmente. Vuelve a pulsar el atajo para apagarlo.");
                 ui.horizontal(|ui| {
                     ui.label("Tamaño del círculo:");
@@ -1458,6 +1460,9 @@ impl ZoomApp {
             }
             Tab::Tutorial => {
                 self.heading(ui, "Clics y teclas", Some(8), "", accent);
+                if let Some(why) = win::unavailable(Action::Tutorial) {
+                    unavailable_note(ui, why);
+                }
                 ui.label("Modo tutorial: cada clic deja una onda de color y las teclas que pulsas aparecen abajo en la pantalla. Ideal para clases y grabaciones.");
                 ui.checkbox(&mut self.s.show_clicks, "Mostrar los clics (amarillo: izquierdo · rojo: derecho · azul: central)");
                 ui.checkbox(&mut self.s.show_keys, "Mostrar las teclas");
@@ -1485,6 +1490,9 @@ impl ZoomApp {
             }
             Tab::Gif => {
                 self.heading(ui, "Grabar GIF", Some(10), "", accent);
+                if let Some(why) = win::unavailable(Action::Gif) {
+                    unavailable_note(ui, why);
+                }
                 ui.label("Pulsa el atajo y arrastra para elegir la zona: empieza a grabar y un borde rojo la marca. Vuelve a pulsar el atajo para terminar y elige dónde guardar el .gif.");
                 ui.horizontal(|ui| {
                     ui.label("Fotogramas por segundo:");
@@ -1535,6 +1543,17 @@ impl ZoomApp {
         }
         live_changed
     }
+}
+
+fn unavailable_note(ui: &mut egui::Ui, text: &str) {
+    egui::Frame::new()
+        .fill(Color32::from_rgb(255, 244, 214))
+        .stroke(Stroke::new(1.0, Color32::from_rgb(230, 190, 110)))
+        .corner_radius(5)
+        .inner_margin(egui::Margin::symmetric(10, 8))
+        .show(ui, |ui| {
+            ui.label(egui::RichText::new(format!("⚠ {text}")).color(Color32::from_rgb(110, 70, 0)));
+        });
 }
 
 fn perf_note(ui: &mut egui::Ui, text: &str) {
