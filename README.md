@@ -10,7 +10,7 @@ para <b>clases, presentaciones y tutoriales</b> en Windows y Linux.<br>
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>⬇ Descargar la última versión (Windows .zip · Linux .tar.gz)</b></a>
+  <a href="../../releases/latest"><b>⬇ Descargar la última versión (Windows .zip · Linux .deb y .tar.gz)</b></a>
 </p>
 
 ---
@@ -46,12 +46,26 @@ Por privacidad, el modo de teclas muestra por defecto **sólo combinaciones** (C
 
 Requiere Windows 10 u 11 de 64 bits.
 
-### Linux (X11)
+### Linux
 
-1. Descarga el `.tar.gz` desde [Releases](../../releases/latest) y descomprímelo: `tar -xzf PresenterToolbox-*-linux-x11-x86_64.tar.gz`
-2. Ábrelo con `./presenter_toolbox`, o instálalo en tu usuario (menú de aplicaciones, sin sudo) con `./install.sh`.
+**Ubuntu, Debian y derivadas** — descarga el `.deb` desde [Releases](../../releases/latest) e instálalo; apt se encarga de las librerías que falten y lo deja en el menú de aplicaciones:
 
-Funciona en sesiones **X11** (Linux Mint, Xubuntu, MATE, KDE en X11…); compruébalo con `echo $XDG_SESSION_TYPE`. En **Wayland** los atajos globales, la captura y los efectos todavía no funcionan. El foco y los bordes suaves necesitan los efectos de escritorio (compositor) activados. El *zoom en vivo* (Ctrl+4) existe sólo en Windows. La configuración se guarda en `~/.config/presenter-toolbox`.
+```bash
+sudo apt install ./presenter-toolbox_*_amd64.deb
+```
+
+**Cualquier otra distribución** — descarga el `.tar.gz`, descomprímelo con `tar -xzf PresenterToolbox-*-linux-x86_64.tar.gz` y ábrelo con `./presenter_toolbox`, o instálalo en tu usuario (sin sudo) con `./install.sh`.
+
+Qué funciona en cada escritorio (compruébalo con `echo $XDG_SESSION_TYPE`):
+
+| | X11 (Mint, Xubuntu, MATE, KDE en X11…) | Wayland (Ubuntu, Fedora y Debian de fábrica) |
+|---|---|---|
+| Atajos globales | ✅ | ✅ como atajos personalizados de GNOME |
+| Zoom, captura y recorte | ✅ | ✅ por el portal del escritorio (pide permiso la primera vez) |
+| Dibujar y descanso | ✅ | ✅ |
+| Foco, clics y teclas, encontrar el mouse, GIF | ✅ | ❌ Wayland no permite capas sobre todo el escritorio |
+
+Lo no disponible aparece marcado en la propia ventana de Opciones. Si necesitas todo en Ubuntu, elige **"Ubuntu on Xorg"** con el engranaje de la pantalla de inicio de sesión. El foco y los bordes suaves necesitan los efectos de escritorio (compositor) activados. El *zoom en vivo* (Ctrl+4) existe sólo en Windows. La configuración se guarda en `~/.config/presenter-toolbox`.
 
 ## Compilar desde el código
 
@@ -64,7 +78,7 @@ cargo build --release
 .\target\release\presenter_toolbox.exe
 ```
 
-Cada tag `v*` (por ejemplo `v0.2.0`) compila y publica automáticamente el `.zip` de Windows y el `.tar.gz` de Linux en *Releases* mediante GitHub Actions.
+Cada tag `v*` (por ejemplo `v0.2.0`) compila y publica automáticamente el `.zip` de Windows y el `.deb` y `.tar.gz` de Linux en *Releases* mediante GitHub Actions.
 
 Hecho en Rust con [egui/eframe](https://github.com/emilk/egui), la API de Windows y X11 ([x11rb](https://github.com/psychon/x11rb)).
 

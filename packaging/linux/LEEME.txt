@@ -1,25 +1,49 @@
-PRESENTER TOOLBOX  ·  Linux (X11) 64 bits
+PRESENTER TOOLBOX  ·  Linux 64 bits
 By @chalalo, basado en el trabajo del gran Mark Russinovich (ZoomIt, Sysinternals).
 
 Zoom, dibujo, foco, clics y teclas en pantalla, capturas y grabación GIF
 para clases y presentaciones.
 
-CÓMO USARLO
-  Sin instalar:   ./presenter_toolbox
-  Instalar en tu usuario (menú de aplicaciones, sin sudo):   ./install.sh
-  Abrirlo al iniciar sesión:   ./install.sh --autostart
-  Desinstalar:   ./install.sh --uninstall
+CÓMO INSTALARLO
+  Debian / Ubuntu y derivadas (recomendado):
+      sudo apt install ./presenter-toolbox_VERSION_amd64.deb
+    Descarga solo las librerías que falten y lo deja en el menú de aplicaciones.
+    Para desinstalar:   sudo apt remove presenter-toolbox
+
+  Cualquier otra distribución, desde este .tar.gz:
+      Sin instalar:                                  ./presenter_toolbox
+      Instalar en tu usuario (sin sudo):             ./install.sh
+      Abrirlo al iniciar sesión:                     ./install.sh --autostart
+      Desinstalar:                                   ./install.sh --uninstall
 
   Queda en la bandeja del sistema: clic para las opciones, clic derecho para el menú.
   Si tu panel no tiene bandeja, ejecútalo otra vez para abrir las opciones.
 
+QUÉ FUNCIONA EN CADA ESCRITORIO
+  Para saber cuál usas:   echo $XDG_SESSION_TYPE
+
+  Sesión X11 (Linux Mint, Xubuntu, MATE, KDE en X11…):  todo.
+
+  Sesión Wayland (el escritorio predeterminado de Ubuntu, Fedora y Debian):
+    · Los atajos se registran como atajos personalizados de GNOME, así que
+      funcionan igual.
+    · El zoom, las capturas y el recorte usan el portal del escritorio. La primera
+      vez el sistema pide permiso para capturar la pantalla: hay que aceptarlo
+      (se puede cambiar luego en Configuración → Privacidad).
+    · El foco, los clics y teclas en pantalla, encontrar el mouse y la grabación GIF
+      NO están disponibles: Wayland no deja poner capas sobre todo el escritorio.
+      Aparecen marcados como no disponibles en la propia ventana de Opciones.
+
+  Si necesitas todo en Ubuntu, en la pantalla de inicio de sesión puedes elegir
+  "Ubuntu on Xorg" con el engranaje.
+
 REQUISITOS
-  · Sesión X11 (Linux Mint, Xubuntu, MATE, KDE en X11…). Para saberlo:  echo $XDG_SESSION_TYPE
-    En Wayland los atajos globales, la captura y los efectos NO funcionan todavía.
   · Efectos de escritorio (compositor) activados para el foco y los bordes suaves.
-    Vienen activados de fábrica en Cinnamon, XFCE y KDE.
+    Vienen activados de fábrica en GNOME, Cinnamon, XFCE y KDE.
   · Opcional: zenity o kdialog (diálogo "Guardar como") y notify-send (avisos).
     Sin ellos, los archivos se guardan en tu carpeta de Imágenes.
+  · Instalando el .deb las librerías se resuelven solas. Con el .tar.gz, si al
+    arrancar se queja de libxkbcommon-x11:   sudo apt install libxkbcommon-x11-0
 
 ATAJOS (se pueden cambiar en Opciones)
   Ctrl+1  Zoom                     Ctrl+6         Recorte al portapapeles
@@ -32,8 +56,8 @@ ATAJOS (se pueden cambiar en Opciones)
   cámbialo haciendo clic en su recuadro.
 
 DIFERENCIAS CON WINDOWS
-  · El "zoom en vivo" (Ctrl+4) no está disponible; XFCE y Cinnamon traen el suyo
-    (Alt + rueda del mouse).
+  · El "zoom en vivo" (Ctrl+4) no está disponible; GNOME, XFCE y Cinnamon traen
+    el suyo (Alt + rueda del mouse, o la lupa de accesibilidad).
 
 CONFIGURACIÓN
   ~/.config/presenter-toolbox/settings.json

@@ -1,4 +1,4 @@
-# Builds the downloads (Windows portable .zip and Linux .tar.gz) and publishes them as a
+# Builds the downloads (Windows portable .zip, Linux .tar.gz and .deb) and publishes them as a
 # GitHub Release whenever a tag like v0.2.0 is pushed.
 name: release
 
@@ -68,10 +68,19 @@ jobs:
           cp packaging/linux/LEEME.txt packaging/linux/install.sh packaging/linux/presenter-toolbox.desktop "$dir/"
           cp docs/icono.png "$dir/presenter-toolbox.png"
           chmod +x "$dir/presenter_toolbox" "$dir/install.sh"
-          tgz="PresenterToolbox-$ver-linux-x11-x86_64.tar.gz"
+          tgz="PresenterToolbox-$ver-linux-x86_64.tar.gz"
           tar -czf "$tgz" "$dir"
           sha256sum "$tgz" > "$tgz.sha256"
           echo "TGZ=$tgz" >> "$GITHUB_ENV"
+
+      - name: Package .deb
+        env:
+          DEB_VERSION: ${{ github.ref_name }}
+        run: |
+          export DEB_VERSION="${DEB_VERSION#v}"
+          deb=$(./packaging/linux/build-deb.sh target/release/presenter_toolbox .)
+          sha256sum "$deb" > "$deb.sha256"
+          echo "DEB=$deb" >> "$GITHUB_ENV"
 
       - name: Publish release
         if: startsWith(github.ref, 'refs/tags/')
@@ -80,3 +89,5 @@ jobs:
           files: |
             ${{ env.TGZ }}
             ${{ env.TGZ }}.sha256
+            ${{ env.DEB }}
+            ${{ env.DEB }}.sha256

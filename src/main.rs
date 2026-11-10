@@ -58,6 +58,18 @@ fn main() -> eframe::Result {
         return Ok(());
     }
 
+    // Icons for a Linux desktop: one PNG per size the hicolor theme expects.
+    if let Some(i) = args.iter().position(|a| a == "--write-png") {
+        let dir = std::path::PathBuf::from(args.get(i + 1).cloned().unwrap_or_else(|| ".".into()));
+        let _ = std::fs::create_dir_all(&dir);
+        for s in [16u32, 24, 32, 48, 64, 128, 256] {
+            if let Some(img) = image::RgbaImage::from_raw(s, s, win::icon_rgba(s as usize)) {
+                let _ = img.save(dir.join(format!("{s}.png")));
+            }
+        }
+        return Ok(());
+    }
+
     if let Some(i) = args.iter().position(|a| a == "--write-msix-assets") {
         let dir = std::path::PathBuf::from(args.get(i + 1).cloned().unwrap_or_else(|| "Assets".into()));
         write_msix_assets(&dir);
