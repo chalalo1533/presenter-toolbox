@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Presenter Toolbox
+Comment=Zoom, dibujo, foco, clics y teclas en pantalla y grabación GIF para presentaciones
+Exec=presenter_toolbox
+Icon=presenter-toolbox
+Terminal=false
+Categories=Utility;Graphics;Education;
+Keywords=zoom;zoomit;presentacion;dibujar;captura;gif;
+StartupNotify=false

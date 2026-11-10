@@ -2568,16 +2568,19 @@ dependencies = [
 
 [[package]]
 name = "presenter_toolbox"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
+ "ab_glyph",
  "arboard",
  "eframe",
+ "epaint_default_fonts",
  "image",
  "raw-window-handle",
  "serde",
  "serde_json",
  "windows-sys 0.61.2",
  "winresource",
+ "x11rb",
 ]
 
 [[package]]

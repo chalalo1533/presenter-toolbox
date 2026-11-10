@@ -1,4 +1,4 @@
-﻿use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// A global keyboard shortcut. `vk` is a Windows virtual-key code (0 = not assigned).
@@ -199,15 +199,27 @@ impl Default for Settings {
 }
 
 /// Portable mode: if a `portable.ini` file sits next to the .exe, settings live in that
-/// same folder (e.g. on a USB stick). Otherwise they go to %APPDATA%\ZoomItRs.
+/// same folder (e.g. on a USB stick). Otherwise they go to %APPDATA%\ZoomItRs on Windows
+/// and to ~/.config/presenter-toolbox on Linux.
 fn path() -> Option<PathBuf> {
     if let Some(dir) = std::env::current_exe().ok().and_then(|p| p.parent().map(|d| d.to_path_buf())) {
         if dir.join("portable.ini").exists() {
             return Some(dir.join("settings.json"));
         }
     }
-    let base = std::env::var_os("APPDATA")?;
-    Some(PathBuf::from(base).join("ZoomItRs").join("settings.json"))
+    #[cfg(windows)]
+    {
+        let base = std::env::var_os("APPDATA")?;
+        Some(PathBuf::from(base).join("ZoomItRs").join("settings.json"))
+    }
+    #[cfg(not(windows))]
+    {
+        let base = match std::env::var_os("XDG_CONFIG_HOME").filter(|v| !v.is_empty()) {
+            Some(dir) => PathBuf::from(dir),
+            None => PathBuf::from(std::env::var_os("HOME")?).join(".config"),
+        };
+        Some(base.join("presenter-toolbox").join("settings.json"))
+    }
 }
 
 impl Settings {

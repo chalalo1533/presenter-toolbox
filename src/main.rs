@@ -1,14 +1,40 @@
-﻿#![windows_subsystem = "windows"]
+#![windows_subsystem = "windows"]
 
 mod app;
-mod fx;
-mod gif_rec;
 mod settings;
+
+// Everything that talks to the operating system lives in three modules with the same
+// names and the same functions on each system, so `app.rs` is shared as it is.
+#[cfg(windows)]
+mod fx;
+#[cfg(windows)]
+mod gif_rec;
+#[cfg(windows)]
+mod win;
+
+#[cfg(target_os = "linux")]
+#[path = "fx_linux.rs"]
+mod fx;
+#[cfg(target_os = "linux")]
+#[path = "gif_rec_linux.rs"]
+mod gif_rec;
+#[cfg(target_os = "linux")]
+mod soft;
+#[cfg(target_os = "linux")]
+#[path = "linux.rs"]
 mod win;
 
 use eframe::egui;
 
 fn main() -> eframe::Result {
+    // Global shortcuts, screen capture and overlays need X11: when an X server is reachable
+    // (also true inside a Wayland session, through XWayland) make the window toolkit use it.
+    #[cfg(target_os = "linux")]
+    if std::env::var_os("DISPLAY").is_some() {
+        // SAFETY: nothing else is running yet, so no other thread can be reading the environment.
+        unsafe { std::env::remove_var("WAYLAND_DISPLAY") };
+    }
+
     let args: Vec<String> = std::env::args().collect();
     let screenshot = args
         .iter()

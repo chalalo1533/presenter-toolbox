@@ -1,4 +1,4 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
 
@@ -127,9 +127,15 @@ pub struct ZoomApp {
     hk_msg: Option<String>,
 }
 
+/// The native window id: an HWND on Windows, an X11 window on Linux.
 fn hwnd_of(cc: &eframe::CreationContext<'_>) -> isize {
     match cc.window_handle().map(|h| h.as_raw()) {
+        #[cfg(windows)]
         Ok(RawWindowHandle::Win32(h)) => h.hwnd.get(),
+        #[cfg(target_os = "linux")]
+        Ok(RawWindowHandle::Xlib(h)) => h.window as isize,
+        #[cfg(target_os = "linux")]
+        Ok(RawWindowHandle::Xcb(h)) => h.window.get() as isize,
         _ => 0,
     }
 }
@@ -1334,7 +1340,11 @@ impl ZoomApp {
                         .add(egui::Slider::new(&mut self.s.live_level, 1.25..=8.0).step_by(0.25).suffix("×"))
                         .changed();
                 });
-                perf_note(ui, "Rendimiento: el ampliado lo hace el compositor de Windows en la GPU, sincronizado con cada fotograma de la pantalla.");
+                if cfg!(windows) {
+                    perf_note(ui, "Rendimiento: el ampliado lo hace el compositor de Windows en la GPU, sincronizado con cada fotograma de la pantalla.");
+                } else {
+                    perf_note(ui, "Todavía no está disponible en Linux. Usa el zoom normal o el zoom propio de tu escritorio (Alt + rueda del mouse en XFCE y Cinnamon).");
+                }
                 ui.label(egui::RichText::new("Funciona en la pantalla principal.").small().color(Color32::from_gray(90)));
             }
             Tab::Draw => {
@@ -1427,7 +1437,7 @@ impl ZoomApp {
                 ui.label("Copia al instante la pantalla donde está el ratón al portapapeles, sin abrir nada. Después la pegas con Ctrl+V en Word, WhatsApp, Paint, un correo…");
                 ui.label("Si estás en zoom o dibujando, copia exactamente lo que ves, con tus anotaciones.");
                 ui.add_space(4.0);
-                perf_note(ui, "Aparece un aviso de Windows junto al reloj confirmando que la captura quedó copiada.");
+                perf_note(ui, "Aparece un aviso del sistema confirmando que la captura quedó copiada.");
             }
             Tab::Spot => {
                 self.heading(ui, "Foco", Some(7), "", accent);
@@ -1758,7 +1768,21 @@ fn copy_image(img: &ColorImage) -> bool {
         height: img.size[1],
         bytes: std::borrow::Cow::Owned(image_rgba(img)),
     };
-    arboard::Clipboard::new().and_then(|mut c| c.set_image(data)).is_ok()
+    #[cfg(windows)]
+    {
+        arboard::Clipboard::new().and_then(|mut c| c.set_image(data)).is_ok()
+    }
+    // On X11 the copied picture lives inside the program that copied it, so the clipboard
+    // object has to stay alive for as long as the app runs.
+    #[cfg(not(windows))]
+    {
+        static CLIPBOARD: std::sync::Mutex<Option<arboard::Clipboard>> = std::sync::Mutex::new(None);
+        let mut guard = CLIPBOARD.lock().unwrap();
+        if guard.is_none() {
+            *guard = arboard::Clipboard::new().ok();
+        }
+        guard.as_mut().is_some_and(|c| c.set_image(data).is_ok())
+    }
 }
 
 fn save_png(img: &ColorImage, path: &std::path::Path) -> bool {

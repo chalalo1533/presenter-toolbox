@@ -4,13 +4,13 @@
 
 <p align="center">
 Zoom, dibujo, foco, clics y teclas en pantalla, capturas y grabación GIF<br>
-para <b>clases, presentaciones y tutoriales</b> en Windows.<br>
+para <b>clases, presentaciones y tutoriales</b> en Windows y Linux.<br>
 <sub>By <a href="https://github.com/chalalo1533">@chalalo</a>, basado en el trabajo del gran
 <a href="https://learn.microsoft.com/sysinternals/downloads/zoomit">Mark Russinovich</a> (ZoomIt, Sysinternals).</sub>
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>⬇ Descargar la última versión (portable, .zip)</b></a>
+  <a href="../../releases/latest"><b>⬇ Descargar la última versión (Windows .zip · Linux .tar.gz)</b></a>
 </p>
 
 ---
@@ -46,9 +46,16 @@ Por privacidad, el modo de teclas muestra por defecto **sólo combinaciones** (C
 
 Requiere Windows 10 u 11 de 64 bits.
 
+### Linux (X11)
+
+1. Descarga el `.tar.gz` desde [Releases](../../releases/latest) y descomprímelo: `tar -xzf PresenterToolbox-*-linux-x11-x86_64.tar.gz`
+2. Ábrelo con `./presenter_toolbox`, o instálalo en tu usuario (menú de aplicaciones, sin sudo) con `./install.sh`.
+
+Funciona en sesiones **X11** (Linux Mint, Xubuntu, MATE, KDE en X11…); compruébalo con `echo $XDG_SESSION_TYPE`. En **Wayland** los atajos globales, la captura y los efectos todavía no funcionan. El foco y los bordes suaves necesitan los efectos de escritorio (compositor) activados. El *zoom en vivo* (Ctrl+4) existe sólo en Windows. La configuración se guarda en `~/.config/presenter-toolbox`.
+
 ## Compilar desde el código
 
-Necesitas [Rust](https://rustup.rs) y las *Build Tools* de Visual Studio (C++).
+Necesitas [Rust](https://rustup.rs) y, en Windows, las *Build Tools* de Visual Studio (C++). En Linux no hace falta nada más.
 
 ```powershell
 git clone https://github.com/chalalo1533/presenter-toolbox
@@ -57,9 +64,9 @@ cargo build --release
 .\target\release\presenter_toolbox.exe
 ```
 
-Cada tag `v*` (por ejemplo `v0.1.0`) compila y publica automáticamente el `.zip` en *Releases* mediante GitHub Actions.
+Cada tag `v*` (por ejemplo `v0.2.0`) compila y publica automáticamente el `.zip` de Windows y el `.tar.gz` de Linux en *Releases* mediante GitHub Actions.
 
-Hecho en Rust con [egui/eframe](https://github.com/emilk/egui) y la API de Windows.
+Hecho en Rust con [egui/eframe](https://github.com/emilk/egui), la API de Windows y X11 ([x11rb](https://github.com/psychon/x11rb)).
 
 ## Créditos
 
