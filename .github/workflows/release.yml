@@ -12,16 +12,61 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-latest
+    # One build per architecture: Intel/AMD, and Windows on ARM (Snapdragon, Surface…).
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            arch: win64
+          - runner: windows-11-arm
+            target: aarch64-pc-windows-msvc
+            arch: win-arm64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
 
       - name: Build
-        run: cargo build --release --locked
+        run: cargo build --release --locked --target ${{ matrix.target }}
+
+      # Windows on ARM has no native OpenGL driver, so a build that compiles can still
+      # fail to open a window. Starting it here is the only way to find that out.
+      - name: Comprobar que arranca y abre su ventana
+        shell: powershell
+        run: |
+          $exe = "target\${{ matrix.target }}\release\presenter_toolbox.exe"
+          $p = Start-Process $exe -PassThru
+          Start-Sleep -Seconds 25
+          $p.Refresh()
+          if ($p.HasExited) { throw "El programa se cerró solo (código $($p.ExitCode))" }
+          if ($p.MainWindowHandle -eq 0) { throw "Arrancó pero no abrió ventana: falló el contexto gráfico" }
+          Write-Host "Ventana abierta: $($p.MainWindowTitle)"
+          try {
+            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
+            $b = New-Object Drawing.Bitmap 1024, 768
+            $g = [Drawing.Graphics]::FromImage($b)
+            $g.CopyFromScreen(0, 0, 0, 0, $b.Size)
+            $b.Save("$pwd\smoke-${{ matrix.arch }}.png")
+          } catch { Write-Host "Sin captura: $_" }
+          Stop-Process -Id $p.Id -Force
+
+      - name: Guardar la captura
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-${{ matrix.arch }}
+          path: smoke-${{ matrix.arch }}.png
+          if-no-files-found: ignore
 
       - name: Package portable zip
         shell: pwsh
@@ -29,10 +74,10 @@ jobs:
           $ver = "${{ github.ref_name }}".TrimStart("v")
           $dir = "PresenterToolbox"
           New-Item -ItemType Directory $dir | Out-Null
-          Copy-Item target\release\presenter_toolbox.exe $dir
+          Copy-Item target\${{ matrix.target }}\release\presenter_toolbox.exe $dir
           Copy-Item packaging\LEEME.txt $dir
           "Configuración portable: mientras este archivo exista, los ajustes se guardan en esta carpeta." | Set-Content "$dir\portable.ini"
-          $zip = "PresenterToolbox-$ver-portable-win64.zip"
+          $zip = "PresenterToolbox-$ver-portable-${{ matrix.arch }}.zip"
           Compress-Archive -Path $dir -DestinationPath $zip
           (Get-FileHash $zip -Algorithm SHA256).Hash + "  " + $zip | Set-Content "$zip.sha256"
           "ZIP=$zip" | Out-File -Append $env:GITHUB_ENV
