@@ -29,6 +29,7 @@ para <b>clases, presentaciones y tutoriales</b> en Windows y Linux.<br>
 | **Ctrl+8** | **Clics y teclas**: ondas de color en cada clic y las combinaciones de teclas dibujadas como teclas reales. |
 | **Ctrl+9** | **Grabar GIF** de una zona (otra vez Ctrl+9 para terminar). |
 | **Ctrl+0** | **Encontrar el mouse** (opcional: al sacudirlo). |
+| **Ctrl+Alt+P** | Abrir la ventana de **opciones** (útil en GNOME, que ya no tiene bandeja del sistema). |
 
 Todos los atajos se pueden cambiar en **Opciones** (clic en el icono de la bandeja).
 

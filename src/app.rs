@@ -125,6 +125,8 @@ pub struct ZoomApp {
     // shortcut editor: which slot is waiting for a new combination
     capturing: Option<usize>,
     hk_msg: Option<String>,
+    /// whether the "it is still running" notice has already been shown this run
+    told_where_it_went: bool,
 }
 
 /// The native window id: an HWND on Windows, an X11 window on Linux.
@@ -201,6 +203,7 @@ impl ZoomApp {
             last_frame_ms: 0.0,
             capturing: None,
             hk_msg: None,
+            told_where_it_went: false,
             s,
         }
     }
@@ -376,6 +379,18 @@ impl ZoomApp {
         self.s.save();
         self.mode = Mode::Hidden;
         win::hide(self.hwnd);
+        // Without a tray icon (GNOME removed the system tray) the program would seem to be
+        // gone, so the first time it hides it says where to find it again.
+        if !self.told_where_it_went && !win::has_tray() {
+            self.told_where_it_went = true;
+            let key = self.s.hotkeys.options;
+            let how = if key.vk == 0 {
+                "Vuelve a abrirlo desde el menú de aplicaciones para ver las opciones.".to_string()
+            } else {
+                format!("Pulsa {} para volver a las opciones.", key.label())
+            };
+            win::notify("Presenter Toolbox sigue activo", &how);
+        }
     }
 
     fn begin(&mut self, ctx: &egui::Context, a: Action, cap: win::Capture) {
@@ -1512,11 +1527,22 @@ impl ZoomApp {
                     ui.label(".");
                 });
                 ui.label("Presenter Toolbox: zoom, anotación, foco, clics y teclas en pantalla y grabación GIF para clases y presentaciones. Acelerado por GPU.");
-                ui.label("Vive en la bandeja del sistema (junto al reloj). Clic en el icono para el menú.");
+                if win::has_tray() {
+                    ui.label("Vive en la bandeja del sistema (junto al reloj). Clic en el icono para el menú.");
+                } else {
+                    ui.label(format!(
+                        "Tu escritorio no tiene bandeja del sistema, así que el programa queda en segundo plano. \
+                         Pulsa {} o vuelve a abrirlo desde el menú de aplicaciones para volver aquí.",
+                        self.s.hotkeys.options.label()
+                    ));
+                }
                 ui.add_space(8.0);
                 ui.label(egui::RichText::new("Atajos de teclado").strong());
                 let keys = win::shared_state().map(|s| s.hotkeys.lock().unwrap().clone()).unwrap_or_default();
-                egui::ScrollArea::vertical().max_height(190.0).show(ui, |ui| {
+                // use whatever room is left above the footer instead of a fixed height,
+                // so the whole list fits when the window is tall enough
+                let list_h = (ui.available_height() - 96.0).max(120.0);
+                egui::ScrollArea::vertical().max_height(list_h).show(ui, |ui| {
                     for (name, ok) in keys {
                         ui.horizontal(|ui| {
                             if ok {

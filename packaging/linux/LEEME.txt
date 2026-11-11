@@ -17,7 +17,9 @@ CÓMO INSTALARLO
       Desinstalar:                                   ./install.sh --uninstall
 
   Queda en la bandeja del sistema: clic para las opciones, clic derecho para el menú.
-  Si tu panel no tiene bandeja, ejecútalo otra vez para abrir las opciones.
+  GNOME (el escritorio de Ubuntu) ya no tiene bandeja del sistema, así que ahí no verás
+  ningún icono: pulsa Ctrl+Alt+P para volver a las opciones, o vuelve a abrir el programa
+  desde el menú de aplicaciones.
 
 QUÉ FUNCIONA EN CADA ESCRITORIO
   Para saber cuál usas:   echo $XDG_SESSION_TYPE
@@ -51,6 +53,7 @@ ATAJOS (se pueden cambiar en Opciones)
   Ctrl+3  Temporizador descanso    Ctrl+7         Foco (Ctrl+Mayús+rueda: tamaño)
   Ctrl+5  Captura al portapapeles  Ctrl+8         Clics y teclas en pantalla
   Ctrl+0  Encontrar el mouse       Ctrl+9         Grabar GIF (otra vez: detener)
+  Ctrl+Alt+P  Abrir esta ventana de opciones
 
   Si un atajo ya lo usa tu escritorio, aparece marcado en rojo en Opciones → Acerca de:
   cámbialo haciendo clic en su recuadro.

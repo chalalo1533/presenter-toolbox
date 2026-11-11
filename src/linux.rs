@@ -879,7 +879,16 @@ pub fn start(
     }
 }
 
+/// True once an icon is actually sitting in a panel. GNOME has no system tray at all,
+/// so there the program has to tell the user another way how to get back to the options.
+static TRAY_DOCKED: AtomicBool = AtomicBool::new(false);
+
+pub fn has_tray() -> bool {
+    TRAY_DOCKED.load(Ordering::SeqCst)
+}
+
 pub fn remove_tray() {
+    TRAY_DOCKED.store(false, Ordering::SeqCst);
     if wayland() {
         gnome::clear_shortcuts();
     }
@@ -1204,6 +1213,7 @@ impl Events {
             Event::DestroyNotify(e) => {
                 if self.tray.as_ref().is_some_and(|t| t.win == e.window) {
                     self.tray = None; // the panel went away; we dock again when a new one shows up
+                    TRAY_DOCKED.store(false, Ordering::SeqCst);
                 }
             }
             Event::MappingNotify(_) => {
@@ -1341,6 +1351,7 @@ impl Events {
         let ev = ClientMessageEvent::new(32, manager, x.atoms._NET_SYSTEM_TRAY_OPCODE, [0u32, 0, win, 0, 0]);
         let _ = x.conn.send_event(false, manager, EventMask::NO_EVENT, ev);
         self.tray = Some(Tray { win, gc, argb: wants_argb, w: 24, h: 24 });
+        TRAY_DOCKED.store(true, Ordering::SeqCst);
     }
 
     fn draw_tray(&mut self) {

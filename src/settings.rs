@@ -56,7 +56,7 @@ pub fn vk_name(vk: u32) -> String {
 }
 
 /// (hotkey id registered with Windows, name) — the index is the slot used by `Hotkeys::get`.
-pub const HOTKEY_SLOTS: [(i32, &str); 11] = [
+pub const HOTKEY_SLOTS: [(i32, &str); 12] = [
     (1, "Zoom"),
     (2, "Dibujar"),
     (3, "Descanso"),
@@ -68,6 +68,7 @@ pub const HOTKEY_SLOTS: [(i32, &str); 11] = [
     (9, "Clics y teclas"),
     (12, "Encontrar el mouse"),
     (13, "Grabar GIF"),
+    (20, "Abrir las opciones"),
 ];
 
 pub const SMOOTHING_NAMES: [&str; 5] = ["Sin suavizado", "Bajo", "Medio", "Alto", "Máximo"];
@@ -87,6 +88,7 @@ pub struct Hotkeys {
     pub tutorial: Hotkey,
     pub find_mouse: Hotkey,
     pub gif: Hotkey,
+    pub options: Hotkey,
 }
 
 impl Default for Hotkeys {
@@ -103,6 +105,9 @@ impl Default for Hotkeys {
             tutorial: Hotkey::ctrl('8' as u32),
             find_mouse: Hotkey::ctrl('0' as u32),
             gif: Hotkey::ctrl('9' as u32),
+            // Ctrl+Alt+P: en GNOME no hay bandeja del sistema, así que sin un atajo
+            // la ventana de opciones solo se alcanza volviendo a abrir el programa.
+            options: Hotkey { ctrl: true, shift: false, alt: true, vk: 'P' as u32 },
         }
     }
 }
@@ -120,7 +125,8 @@ impl Hotkeys {
             7 => self.spotlight,
             8 => self.tutorial,
             9 => self.find_mouse,
-            _ => self.gif,
+            10 => self.gif,
+            _ => self.options,
         }
     }
     pub fn get_mut(&mut self, slot: usize) -> &mut Hotkey {
@@ -135,7 +141,8 @@ impl Hotkeys {
             7 => &mut self.spotlight,
             8 => &mut self.tutorial,
             9 => &mut self.find_mouse,
-            _ => &mut self.gif,
+            10 => &mut self.gif,
+            _ => &mut self.options,
         }
     }
 }

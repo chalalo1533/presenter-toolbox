@@ -109,7 +109,7 @@ fn main() -> eframe::Result {
     let viewport = egui::ViewportBuilder::default()
         .with_title("Presenter Toolbox")
         .with_app_id("presenter_toolbox")
-        .with_inner_size([680.0, 580.0])
+        .with_inner_size([680.0, 700.0])
         .with_decorations(false)
         .with_resizable(false)
         .with_visible(!start_hidden)

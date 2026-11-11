@@ -1,6 +1,6 @@
 [package]
 name = "presenter_toolbox"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Zoom, dibujo, foco, clics y teclas en pantalla y grabación GIF para presentaciones en Windows y Linux"
 license = "MIT"

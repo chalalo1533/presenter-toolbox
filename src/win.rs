@@ -462,6 +462,11 @@ unsafe fn tray_data(hwnd: HWND) -> NOTIFYICONDATAW {
     }
 }
 
+/// Windows always has a notification area, so the icon is there whenever it was added.
+pub fn has_tray() -> bool {
+    TRAY_ADDED.load(Ordering::SeqCst)
+}
+
 pub fn remove_tray() {
     if !TRAY_ADDED.swap(false, Ordering::SeqCst) {
         return;
