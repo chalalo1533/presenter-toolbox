@@ -14,7 +14,13 @@ out=${2:-$root/dist}
 [ -x "$bin" ] || { echo "No encuentro el binario: $bin" >&2; exit 1; }
 
 # DEB_VERSION lets the release workflow use the tag instead of what Cargo.toml says.
-version=${DEB_VERSION:-$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$root/Cargo.toml" | head -1)}
+# Debian versions have to start with a digit, so anything else (a branch name from a
+# manual run, say) is ignored in favour of what Cargo.toml says.
+version=$(sed -n 's/^version *= *"\(.*\)"/\1/p' "$root/Cargo.toml" | head -1)
+case ${DEB_VERSION:-} in
+    [0-9]*) version=$DEB_VERSION ;;
+    ?*) echo "Aviso: ignoro DEB_VERSION='$DEB_VERSION' (no empieza por un dígito); uso $version" >&2 ;;
+esac
 arch=$(dpkg --print-architecture)
 
 # The oldest glibc this binary can run against, read from the binary itself, so the

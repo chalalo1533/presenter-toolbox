@@ -39,25 +39,55 @@ jobs:
         run: cargo build --release --locked --target ${{ matrix.target }}
 
       # Windows on ARM has no native OpenGL driver, so a build that compiles can still
-      # fail to open a window. Starting it here is the only way to find that out.
-      - name: Comprobar que arranca y abre su ventana
+      # fail to draw anything. Starting it here and photographing its window with
+      # PrintWindow (which asks the window to paint itself, so it works even when
+      # something else covers the screen) is the only way to find that out.
+      - name: Comprobar que arranca y dibuja su ventana
         shell: powershell
         run: |
+          Add-Type -AssemblyName System.Drawing
+          Add-Type @"
+          using System;
+          using System.Runtime.InteropServices;
+          public class Win {
+            [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr h, IntPtr dc, uint flags);
+            [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
+            [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
+          }
+          "@
           $exe = "target\${{ matrix.target }}\release\presenter_toolbox.exe"
           $p = Start-Process $exe -PassThru
           Start-Sleep -Seconds 25
           $p.Refresh()
           if ($p.HasExited) { throw "El programa se cerró solo (código $($p.ExitCode))" }
-          if ($p.MainWindowHandle -eq 0) { throw "Arrancó pero no abrió ventana: falló el contexto gráfico" }
+          $h = $p.MainWindowHandle
+          if ($h -eq 0) { throw "Arrancó pero no abrió ventana: falló el contexto gráfico" }
           Write-Host "Ventana abierta: $($p.MainWindowTitle)"
-          try {
-            Add-Type -AssemblyName System.Windows.Forms, System.Drawing
-            $b = New-Object Drawing.Bitmap 1024, 768
-            $g = [Drawing.Graphics]::FromImage($b)
-            $g.CopyFromScreen(0, 0, 0, 0, $b.Size)
-            $b.Save("$pwd\smoke-${{ matrix.arch }}.png")
-          } catch { Write-Host "Sin captura: $_" }
+
+          $r = New-Object Win+RECT
+          [void][Win]::GetWindowRect($h, [ref]$r)
+          $w = $r.Right - $r.Left; $hh = $r.Bottom - $r.Top
+          Write-Host "Tamaño: ${w}x${hh}"
+          $bmp = New-Object Drawing.Bitmap $w, $hh
+          $g = [Drawing.Graphics]::FromImage($bmp)
+          $dc = $g.GetHdc()
+          [void][Win]::PrintWindow($h, $dc, 2)   # 2 = PW_RENDERFULLCONTENT, incluye lo pintado por la GPU
+          $g.ReleaseHdc($dc)
+          $bmp.Save("$pwd\smoke-${{ matrix.arch }}.png")
           Stop-Process -Id $p.Id -Force
+
+          # Una ventana sin dibujar sale de un solo color; la nuestra tiene texto, iconos y botones.
+          $first = $bmp.GetPixel(0, 0).ToArgb()
+          $diff = 0; $total = 0
+          for ($y = 0; $y -lt $hh; $y += 4) {
+            for ($x = 0; $x -lt $w; $x += 4) {
+              $total++
+              if ($bmp.GetPixel($x, $y).ToArgb() -ne $first) { $diff++ }
+            }
+          }
+          $pct = [math]::Round(100.0 * $diff / $total, 1)
+          Write-Host "Pixeles distintos del fondo: $pct%"
+          if ($pct -lt 5) { throw "La ventana salió en blanco ($pct%): el contexto gráfico no está dibujando" }
 
       - name: Guardar la captura
         if: always()
