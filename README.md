@@ -10,7 +10,7 @@ para <b>clases, presentaciones y tutoriales</b> en Windows y Linux.<br>
 </p>
 
 <p align="center">
-  <a href="../../releases/latest"><b>⬇ Descargar la última versión (Windows .zip · Linux .deb y .tar.gz)</b></a>
+  <a href="../../releases/latest"><b>⬇ Descargar la última versión (Windows x64 y ARM · Linux .deb y .tar.gz)</b></a>
 </p>
 
 ---
@@ -45,7 +45,7 @@ Por privacidad, el modo de teclas muestra por defecto **sólo combinaciones** (C
 
 **Modo portable:** mientras exista `portable.ini` junto al `.exe`, la configuración se guarda en esa carpeta; si no, en `%APPDATA%\ZoomItRs`.
 
-Requiere Windows 10 u 11 de 64 bits.
+Requiere Windows 10 u 11 de 64 bits. Hay dos descargas: **`win64`** para equipos Intel y AMD, y **`win-arm64`** para los de procesador ARM (Snapdragon, Surface Pro X y similares). Si eliges la que no toca, Windows avisará de que la aplicación no es compatible.
 
 ### Linux
 
@@ -79,7 +79,7 @@ cargo build --release
 .\target\release\presenter_toolbox.exe
 ```
 
-Cada tag `v*` (por ejemplo `v0.2.0`) compila y publica automáticamente el `.zip` de Windows y el `.deb` y `.tar.gz` de Linux en *Releases* mediante GitHub Actions.
+Cada tag `v*` (por ejemplo `v0.2.0`) compila y publica automáticamente los `.zip` de Windows (x64 y ARM) y el `.deb` y `.tar.gz` de Linux en *Releases* mediante GitHub Actions. Las versiones de Windows se prueban en el propio runner: se arranca el programa y se comprueba que su ventana dibuja.
 
 Hecho en Rust con [egui/eframe](https://github.com/emilk/egui), la API de Windows y X11 ([x11rb](https://github.com/psychon/x11rb)).
 
